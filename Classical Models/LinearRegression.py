@@ -22,7 +22,7 @@ class LinearRegression:
 
 def main():
     X = np.linspace(1, 100, 100)
-    Y = 0.8 * X + 10 * np.random.random((1, 100))
+    Y = 0.8 * X + 10 * np.random.random((1, 100)) - 10 * np.random.random((1, 100))
 
     import matplotlib.pyplot as plt
 
@@ -34,6 +34,7 @@ def main():
 
     model = LinearRegression()
     model.fit(X.reshape(-1, 1), Y.reshape(-1, 1))
+    print(model.b)
 
 
 
