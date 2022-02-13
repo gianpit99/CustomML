@@ -12,10 +12,10 @@ class LinearRegression:
         return self.b
 
     def predict(self, x):
-        return
+        return np.matmul(self.b, x)
 
     def error(self, x, y):
-        return
+        return np.power((self.predict(x) - y), 2)
 
 
 
