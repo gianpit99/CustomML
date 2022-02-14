@@ -2,15 +2,54 @@ import numpy as np
 
 # Base Loss Class
 class Loss:
-    def calculate(self, output, y):
+    def regularizationLoss(self):
+        regularizationLoss = 0
+
+        for layer in self.trainableLayers:
+            if layer.weightRegularizerL1 > 0:
+                regularizationLoss += layer.weightRegularizerL1 * np.sum(np.abs(layer.weights))
+
+            if layer.weightRegularizerL2 > 0:
+                regularizationLoss += layer.weightRegularizerL2 * np.sum(layer.weights * layer.weights)
+
+            if layer.biasRegularizerL1 > 0:
+                regularizationLoss += layer.biasRegularizerL1 * np.sum(layer.biases * layer.biases)
+
+            if layer.biadRegularizerL2 > 0:
+                regularizationLoss += layer.biasRegularizerL2 * np.sum(layer.biases * layer.biases)
+
+        return regularizationLoss
+
+    def rememberTrainableLayers(self, trainableLayers):
+        self.trainableLayers = trainableLayers
+
+    def calculate(self, output, y, *, includeRegularization=False):
         # Calculate the loss for each sample
         sampleLoss = self.forward(output, y)
 
         # Calculate the mean loss
         meanLoss = np.mean(sampleLoss)
 
+        self.accumulatedSum += np.sum(sampleLoss)
+        self.accumulatedCount += len(sampleLoss)
+
+        if not includeRegularization:
+            return meanLoss
+
         # Return the loss
-        return meanLoss
+        return meanLoss, self.regularizationLoss()
+
+    def calculateAccumulated(self, *, includeRegularization=False):
+        dataLoss = self.accumulatedSum / self.accumulatedCount
+
+        if not includeRegularization:
+            return dataLoss
+
+        return dataLoss, self.regularizationLoss()
+
+    def newPass(self):
+        self.accumulatedSum = 0
+        self.accumulatedCount = 0
 
 
 class LossCategoricalCrossentropy(Loss):
@@ -55,3 +94,26 @@ class LossCategoricalCrossentropy(Loss):
 
         # Normalize the gradient
         self.dInputs = self.dInputs / samples
+
+
+
+class LossBinaryCrossentropy(Loss):
+    def forward(self, yPred, yTrue):
+        yPredClipped = np.clip(yPred, 1e-7, 1 - 1e-7)
+
+        sampleLoss = -(yTrue * np.log(yPredClipped) + (1 - yTrue) * np.log(1 - yPredClipped))
+
+        sampleLoss = np.mean(sampleLoss, axis=1)
+
+        return sampleLoss
+
+    def backward(self, dValues, yTrue):
+        samples = len(dValues)
+
+        outputs = len(dValues[0])
+
+        clippedDValues = np.clip(dValues, 1e-7, 1 - 1e-7)
+
+        self.dInputs = -(yTrue / clippedDValues - (1 - yTrue) / (1 - clippedDValues)) / ouput
+
+        self.dInputs / samples
