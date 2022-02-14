@@ -13,6 +13,9 @@ class ActivationReLU:
         # Make the gradient zero when values are negative
         self.dInputs[self.inputs <= 0] = 0
 
+    def predictions(self, outputs):
+        return outputs
+
 
 class ActivationSoftmax:
     def forward(self, inputs):
@@ -39,3 +42,28 @@ class ActivationSoftmax:
 
             # Calculate the sample wise gradient
             self.dInputs[index] = np.dot(jacobianMatrix, singleDValues)
+
+    def predictions(delf, outputs):
+        return np.argmax(outputs, axis=1)
+
+class ActivationSigmoid:
+    def forward(self, inputs, training):
+        self.inputs = inputs
+        self.output = 1 / (1 + np.exp(-inputs))
+
+    def backward(self, dvalues):
+        self.dinputs = dvalues * (1 - self.output) * self.output
+
+    def predictions(self, outputs):
+        return (outputs > 0.5) * 1
+
+class ActivationLinear:
+    def forward(self, inputs, training):
+        self.inputs = inputs
+        self.output = inputs
+
+    def backward(self, dValues):
+        self.dInputs = dValues.copy()
+
+    def predictions(self, outputs):
+        return outputs

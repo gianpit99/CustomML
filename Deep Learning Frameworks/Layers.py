@@ -2,121 +2,74 @@ import numpy as np
 
 
 class LayerDense:
-    def __init__(self, nInputs, nNeurons):
+    def __init__(   self,
+                    nInputs,
+                    nNeurons,
+                    weightRegularizationL1=0.0,
+                    weightRegularizationL2=0.0,
+                    biasRegularizationL1=0.0,
+                    biasRegularizationL2=0.0):
         self.weights = 0.01 * np.random.randn((nInputs, nNeurons), dtype=np.float32)
         self.biases = np.zeros((1, nNeurons))
 
+        self.weightRegularizationL1 = weightRegularizationL1
+        self.weightRegularizationL2 = weightRegularizationL2
+        self.biasRegularizationL1 = biasRegularizationL1
+        self.biasRegularizationL2 = biasRegularizationL2
+
     def forward(self, inputs):
+        self.inputs = inputs
         self.output = np.dot(inputs, self.weights) + self.biases
 
     def backward(self, dValues):
         # Weight and bias gradients
-        self.dWeight = np.dot(self.inputs.T, dValues)
+        self.dWeights = np.dot(self.inputs.T, dValues)
         self.dBiases = np.sum(dValues, axis=0, keepdims=True)
+
+        if self.weightRegularizationL1 > 0:
+            dL1 = np.ones_like(self.weights)
+            dL1[self.weights < 0] = -1
+            self.dWeights += self.weightRegularizationL1 * dL1
+
+        if self.weightRegularizationL2 > 0:
+            self.dWeights += 2 * self.weightRegularizationL2 * self.weights
+
+        if self.biasRegularizationL1 > 0:
+            dL1 = np.ones_like(self.biases)
+            dL1[self.biases < 0] = -1
+            self.dBiases += self.biasRegularizationL1 * dL1
+
+        if self.biasRegularizationL2 > 0:
+            self.dBiases += 2 * self.biasRegularizationL2 * self.biases
 
         # Value gradients for chain rule
         self.dInputs = np.dot(dValues, self.weights.T)
 
+    def getParameters(self):
+        return self.weights, self.biases
+
+    def setParameters(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
 
 
+class LayerDropout:
+    def __init__(self, rate):
+        self.rate = 1 - rate
 
-
-
-class ActivationReLU:
-    def forward(self, inputs):
+    def forward(self, inputs, training):
         self.inputs = inputs
-        self.output = np.maximum(0, inputs)
 
-    def backward(self, dValues):
-        # Make a copy since we need to edit the original variables
-        self.dInputs = dValues.copy()
+        if not training:
+            self.output = inputs.copy()
+            return
 
-        # Make the gradient zero when values are negative
-        self.dInputs[self.inputs <= 0] = 0
+        self.binaryMask = np.random.binomial(1, self.rate, size=inputs.shape / self.rate)
 
-class ActivationSoftmax:
-    def forward(self, inputs):
-        # Un-Normalized Probabilities
-        expValues = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
-
-        # Normalize Each Sample
-        probs = expValues / np.sum(exp_values, axis=1, keepdims=True)
-
-        # Create the output
-        self.output = probs
-
-    def backward(self, dValues):
-        # Create an array to hold the gradients
-        self.dInputs = np.empty_like(dValues)
-
-        # Enumerate and iterate over the outputs and gradients
-        for index, (singleOutput, singleDValues) in enumerate(zip(self.output, dValues))
-            # Flatten the output array
-            singleOutput = singleOutput.reshape(-1, 1)
-
-            # Calculate the jacobian matrix of the output
-            jacobianMatrix = np.diagflat(singleOutput) - np.dot(singleOutput, singleOutput.T)
-
-            # Calculate the sample wise gradient
-            self.dInputs[index] = np.dot(jacobianMatrix, singleDValues)
+    def backward(self, dvalues):
+        seld.dinputs = dvalues * self.binaryMask
 
 
-
-
-
-
-# Base Loss Class
-class Loss:
-    def calculate(self, output, y):
-        # Calculate the loss for each sample
-        sampleLoss = self.forward(output, y)
-
-        # Calculate the mean loss
-        meanLoss = np.mean(sampleLoss)
-
-        # Return the loss
-        return meanLoss
-
-
-class LossCategoricalCrossentropy(Loss):
-    def forward(self, yPred, yTrue):
-        # The number of samples in the batch
-        nSamples = len(yPred)
-
-        # Clip the data to prevent division by zero errors
-        yPredClipped = np.clip(yPred, 1e-7, 1 - 1e-7)
-
-        # Target probabilities for categorial data
-        if len(yTrue.shape) == 1:
-            correctConfidences = yPredClipped[
-                range(samples),
-                yTrue
-            ]
-
-        # Mask values if one-hot-encoding
-        elif len(yTrue.shape) == 2:
-            correctConfidences = np.sum(
-                yPredClipped * yTrue,
-                axis = 1
-            )
-
-        # Loss for each class
-        negativeLogLiklihoods = -np.log(correctConfidences)
-        return negativeLogLiklihoods
-
-    def backward(self, dValues, yTrue):
-        # Number of samples
-        nSamples = len(dValues)
-
-        # Number of labels in each sample
-        nLables = len(dValues[0])
-
-        # If lables are sparse, turn them into a one-hot-vector
-        if len(yTrue.shape) == 1:
-            yTrue = np.eye(nLabels)[yTrue]
-
-        # Calculate the gradient
-        self.dInputs = -yTrue / dValues
-
-        # Normalize the gradient
-        self.dInputs = self.dInputs / samples
+class LayerInput:
+    def forward(self, Inputs, Training):
+        self.output = inputs
