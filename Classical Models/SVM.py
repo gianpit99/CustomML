@@ -25,11 +25,6 @@ class SVM:
     Objective
     ---------
     - SVM's maximize the distance of the hyperplane to the closest points (or the minimum distance)
-
-    Wolfe Dual Problem
-    ------------------
-
-
     '''
     def __init__(self, C=1000, gamma=0, kernel='None'):
         self.supportVectors = None
